@@ -80,7 +80,7 @@ const clock = computed(() => {
 })
 const progress = computed(() => {
   const state = display.value
-  return state ? Math.min(100, (state.remaining / state.length) * 100) : 0
+  return state ? Math.max(0, 100 - (state.remaining / state.length) * 100) : 0
 })
 const dateFormat = computed(() => new Intl.DateTimeFormat(speechLanguage.value, { dateStyle: 'medium', timeStyle: 'short' }))
 
@@ -100,6 +100,17 @@ function navigate(target: typeof screen.value) {
 
 function draftName(draft: Draft) {
   return draft.defaultName ? t(draft.defaultName) : draft.name
+}
+
+function isRest(name: string) {
+  const label = name.trim().toLowerCase()
+  return label === t('rest', {}, { locale: 'ru' }).toLowerCase()
+    || label === t('rest', {}, { locale: 'en' }).toLowerCase()
+}
+
+function segmentWeight(draft: Draft) {
+  if (validate(draft)) return 1
+  return draft.type === 'fixed' ? Number(draft.seconds) : (Number(draft.minSeconds) + Number(draft.maxSeconds)) / 2
 }
 
 function editName(draft: Draft, event: Event) {
@@ -285,10 +296,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="shell">
+  <main class="shell" :class="{ 'workout-shell': screen === 'workout' }">
     <header class="masthead">
-      <span class="mark" aria-hidden="true">◴</span>
       <h1>{{ t('title') }}</h1>
+      <span v-if="screen === 'workout' && display" class="cycle">{{ t('cycle', { number: display.cycle }) }}</span>
     </header>
 
     <nav v-if="screen !== 'workout'" :aria-label="t('navigation')">
@@ -298,25 +309,12 @@ onUnmounted(() => {
 
     <form v-if="screen === 'setup'" class="content" novalidate @submit.prevent="start">
       <div class="section-heading">
-        <h2 ref="heading" tabindex="-1">{{ t('intervals') }}</h2>
-        <label class="sound"><input v-model="sound" type="checkbox"> {{ t('sound') }}</label>
+        <h2 ref="heading" tabindex="-1">{{ t('plan') }}</h2>
+        <span class="plan-count" :aria-label="t('intervalCount', { count: drafts.length })">{{ String(drafts.length).padStart(2, '0') }}</span>
       </div>
-      <div class="fields voice-settings">
-        <label>{{ t('language') }}
-          <select v-model="locale">
-            <option value="ru" lang="ru">Русский</option>
-            <option value="en" lang="en">English</option>
-          </select>
-        </label>
-        <label>{{ t('voice') }}
-          <select v-model="voiceChoice" :disabled="!sound">
-            <option value="">{{ t('defaultVoice') }}</option>
-            <option v-for="voice in voices" :key="voice.voiceURI" :value="voice.voiceURI">{{ voice.name }}</option>
-          </select>
-        </label>
-        <button type="button" :disabled="!sound" @click="previewVoice">{{ t('preview') }}</button>
+      <div class="plan-strip" aria-hidden="true">
+        <span v-for="draft in drafts" :key="draft.id" :class="{ rest: isRest(draftName(draft)) }" :style="{ flexGrow: segmentWeight(draft) }"></span>
       </div>
-      <p v-if="audioError" class="error" role="alert">{{ t('audioError') }}</p>
       <fieldset v-for="(draft, index) in drafts" :key="draft.id" class="card">
         <legend>{{ t('interval', { number: index + 1 }) }}</legend>
         <label>{{ t('name') }}<input :id="`interval-${draft.id}`" :value="draftName(draft)" :placeholder="t('interval', { number: index + 1 })" @input="editName(draft, $event)"></label>
@@ -344,35 +342,51 @@ onUnmounted(() => {
         <button type="button" @click="addInterval">{{ t('add') }}</button>
         <button class="primary" type="submit" :disabled="!canStart">{{ t('start') }}</button>
       </div>
+      <details class="audio-settings" :open="audioError || undefined">
+        <summary>{{ t('audioSettings') }}</summary>
+        <div class="fields voice-settings">
+          <label class="sound"><input v-model="sound" type="checkbox"> {{ t('sound') }}</label>
+          <label>{{ t('language') }}
+            <select v-model="locale">
+              <option value="ru" lang="ru">Русский</option>
+              <option value="en" lang="en">English</option>
+            </select>
+          </label>
+          <label>{{ t('voice') }}
+            <select v-model="voiceChoice" :disabled="!sound">
+              <option value="">{{ t('defaultVoice') }}</option>
+              <option v-for="voice in voices" :key="voice.voiceURI" :value="voice.voiceURI">{{ voice.name }}</option>
+            </select>
+          </label>
+          <button type="button" :disabled="!sound" @click="previewVoice">{{ t('preview') }}</button>
+        </div>
+        <p v-if="audioError" class="error" role="alert">{{ t('audioError') }}</p>
+      </details>
     </form>
 
-    <section v-else-if="screen === 'workout' && display" class="content">
+    <section v-else-if="screen === 'workout' && display" class="content workout" :class="{ rest: isRest(display.current.name) }">
       <div class="training">
         <div aria-live="polite" aria-atomic="true">
-          <p class="muted">{{ t('cycle', { number: display.cycle }) }}</p>
           <h2 ref="heading" tabindex="-1">{{ display.current.name }}</h2>
+          <span v-if="display.paused" class="muted">{{ t('paused') }}</span>
         </div>
-        <div class="dial" :style="{ '--remaining': progress + '%' }">
-          <div>
-            <strong role="timer">{{ clock }}</strong>
-            <span class="muted">{{ t(display.paused ? 'paused' : 'countdown') }}</span>
-          </div>
-        </div>
-        <p>{{ t('next', { name: display.next.name, duration: describe(display.next) }) }}</p>
-        <p v-if="audioError" class="error" role="alert">{{ t('workoutAudioError') }}</p>
+        <strong class="clock" role="timer" :aria-label="t('countdown')">{{ clock }}</strong>
+        <div class="timer-strip" :style="{ '--elapsed': progress + '%' }" aria-hidden="true"></div>
       </div>
+      <p>{{ t('next', { name: display.next.name, duration: describe(display.next) }) }}</p>
+      <p v-if="audioError" class="error" role="alert">{{ t('workoutAudioError') }}</p>
       <div class="actions">
-        <button type="button" @click="stop">{{ t('stop') }}</button>
         <button type="button" class="primary" @click="togglePause">{{ t(display.paused ? 'resume' : 'pause') }}</button>
+        <button type="button" @click="stop">{{ t('stop') }}</button>
       </div>
     </section>
 
-    <section v-else class="content">
+    <section v-else class="content history">
       <h2 ref="heading" tabindex="-1">{{ t('history') }}</h2>
       <p v-if="readError" class="error" role="alert">{{ t('readError') }}</p>
       <p v-if="writeError" class="error" role="alert">{{ t('writeError') }}</p>
       <p v-if="entries.length === 0" class="muted">{{ t('emptyHistory') }}</p>
-      <article v-for="entry in entries" :key="entry.id" class="card history-entry">
+      <article v-for="entry in entries" :key="entry.id" class="history-entry">
         <time class="muted" :datetime="entry.startedAt">{{ dateFormat.format(new Date(entry.startedAt)) }}</time>
         <p>{{ entry.settings.intervals.map(interval => interval.name + ' ' + describe(interval)).join(' → ') }}</p>
         <button type="button" @click="useEntry(entry)">{{ t('use') }}</button>
