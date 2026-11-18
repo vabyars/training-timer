@@ -6,6 +6,8 @@ export function createTimer(intervals: Interval[], now: number) {
   let length = duration(intervals[index])
   let deadline = now + length
   let paused: number | null = null
+  let runningSince = now
+  let elapsedBeforePause = 0
 
   return {
     advance(time: number) {
@@ -20,12 +22,18 @@ export function createTimer(intervals: Interval[], now: number) {
       return true
     },
     pause(time: number) {
+      if (paused !== null) return
+      elapsedBeforePause += time - runningSince
       paused = Math.max(0, deadline - time)
     },
     resume(time: number) {
       if (paused === null) return
       deadline = time + paused
+      runningSince = time
       paused = null
+    },
+    elapsed(time: number) {
+      return elapsedBeforePause + (paused === null ? time - runningSince : 0)
     },
     read(time: number) {
       return {

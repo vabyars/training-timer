@@ -11,6 +11,9 @@ const messages = {
     history: 'История',
     language: 'Язык',
     plan: 'План тренировки',
+    workoutName: 'Название тренировки',
+    elapsed: 'Время работы таймера · {duration}',
+    cycles: '{count} цикл | {count} цикла | {count} циклов',
     intervalCount: 'Интервалов: {count}',
     audioSettings: 'Звук и язык',
     sound: 'Звук',
@@ -59,6 +62,9 @@ const messages = {
     history: 'History',
     language: 'Language',
     plan: 'Workout plan',
+    workoutName: 'Workout name',
+    elapsed: 'Timer run time · {duration}',
+    cycles: '{count} cycle | {count} cycles',
     intervalCount: 'Intervals: {count}',
     audioSettings: 'Sound and language',
     sound: 'Sound',
@@ -109,11 +115,20 @@ function readLanguage() {
   }
 }
 
+const russianPluralRules = new Intl.PluralRules('ru')
+
 export const i18n = createI18n({
   legacy: false,
   locale: readLanguage(),
   fallbackLocale: 'ru',
   messages,
+  pluralRules: {
+    ru: (count, choices, fallback) => {
+      if (choices !== 3) return fallback?.(count, choices) ?? 0
+      const category = russianPluralRules.select(count)
+      return category === 'one' ? 0 : category === 'few' ? 1 : 2
+    },
+  },
 })
 
 const { locale, t } = i18n.global

@@ -6,6 +6,9 @@ export interface Entry {
   id: string
   startedAt: string
   settings: Settings
+  name?: string
+  elapsedMs?: number
+  cycles?: number
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -21,7 +24,12 @@ function isInterval(value: unknown): value is Interval {
 
 function isEntry(value: unknown): value is Entry {
   if (!isObject(value) || typeof value.id !== 'string' || typeof value.startedAt !== 'string'
-    || !Number.isFinite(Date.parse(value.startedAt)) || !isObject(value.settings)) return false
+    || !Number.isFinite(Date.parse(value.startedAt)) || !isObject(value.settings)
+    || (value.name !== undefined && typeof value.name !== 'string')
+    || (value.elapsedMs !== undefined && (typeof value.elapsedMs !== 'number'
+      || !Number.isFinite(value.elapsedMs) || value.elapsedMs < 0))
+    || (value.cycles !== undefined && (typeof value.cycles !== 'number'
+      || !Number.isSafeInteger(value.cycles) || value.cycles < 1))) return false
 
   const { sound, intervals } = value.settings
   return typeof sound === 'boolean' && Array.isArray(intervals)

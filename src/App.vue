@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } fr
 import { useI18n } from 'vue-i18n'
 import { createAudio } from './audio'
 import { readHistory, saveHistory, type Entry } from './history'
-import { validSeconds, type Interval, type Settings } from './intervals'
+import { validSeconds, type Interval } from './intervals'
 import { createTimer } from './timer'
 
 interface Draft {
@@ -35,6 +35,7 @@ const drafts = ref([
   makeDraft({ name: '', type: 'fixed', seconds: 4 }, 'rest'),
 ])
 const sound = ref(true)
+const workoutName = ref('')
 const voiceKey = computed(() => locale.value === 'en' ? 'training-timer:voice:en' : 'training-timer:voice')
 const speechLanguage = computed(() => locale.value === 'en' ? 'en-US' : 'ru-RU')
 const voiceURI = ref('')
@@ -62,6 +63,7 @@ const writeError = ref(false)
 const audioError = ref(false)
 const audio = createAudio(() => { audioError.value = true })
 let timer: ReturnType<typeof createTimer> | undefined
+let currentEntry: Entry | undefined
 let screenLock: WakeLockSentinel | undefined
 let requestingScreenLock = false
 let frame = 0
@@ -83,6 +85,13 @@ const progress = computed(() => {
   return state ? Math.max(0, 100 - (state.remaining / state.length) * 100) : 0
 })
 const dateFormat = computed(() => new Intl.DateTimeFormat(speechLanguage.value, { dateStyle: 'medium', timeStyle: 'short' }))
+
+function formatElapsed(milliseconds: number) {
+  const seconds = Math.floor(milliseconds / 1000)
+  const parts = [Math.floor(seconds / 60) % 60, seconds % 60]
+  if (seconds >= 3600) parts.unshift(Math.floor(seconds / 3600))
+  return parts.map(part => String(part).padStart(2, '0')).join(':')
+}
 
 function describe(interval: Interval) {
   const value = interval.type === 'fixed' ? interval.seconds : `${interval.minSeconds}–${interval.maxSeconds}`
@@ -106,11 +115,6 @@ function isRest(name: string) {
   const label = name.trim().toLowerCase()
   return label === t('rest', {}, { locale: 'ru' }).toLowerCase()
     || label === t('rest', {}, { locale: 'en' }).toLowerCase()
-}
-
-function segmentWeight(draft: Draft) {
-  if (validate(draft)) return 1
-  return draft.type === 'fixed' ? Number(draft.seconds) : (Number(draft.minSeconds) + Number(draft.maxSeconds)) / 2
 }
 
 function editName(draft: Draft, event: Event) {
@@ -172,11 +176,11 @@ function loadHistory() {
   }
 }
 
-function record(settings: Settings) {
-  const id = Array.from(crypto.getRandomValues(new Uint32Array(4)), part => part.toString(16).padStart(8, '0')).join('')
-  const entry = { id, startedAt: new Date().toISOString(), settings }
+function record(entry: Entry) {
   loadHistory()
-  entries.value = [entry, ...entries.value].slice(0, 50)
+  entries.value = [entry, ...entries.value.filter(saved => saved.id !== entry.id)]
+    .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))
+    .slice(0, 50)
   try {
     saveHistory(entries.value)
     writeError.value = false
@@ -186,6 +190,7 @@ function record(settings: Settings) {
 }
 
 function useEntry(entry: Entry) {
+  workoutName.value = entry.name ?? ''
   drafts.value = entry.settings.intervals.map(interval => makeDraft(interval))
   sound.value = entry.settings.sound
   navigate('setup')
@@ -241,6 +246,8 @@ function start() {
       : { name, type: 'random', minSeconds: Number(draft.minSeconds), maxSeconds: Number(draft.maxSeconds) }
   })
   const settings = { sound: sound.value, intervals }
+  const id = Array.from(crypto.getRandomValues(new Uint32Array(4)), part => part.toString(16).padStart(8, '0')).join('')
+  currentEntry = { id, startedAt: new Date().toISOString(), settings, name: workoutName.value.trim() }
   timer = createTimer(intervals, performance.now())
   audioError.value = false
   audio.stop()
@@ -248,7 +255,7 @@ function start() {
   tick()
   void keepScreenOn()
   navigate('workout')
-  record(settings)
+  record(currentEntry)
 }
 
 function togglePause() {
@@ -271,6 +278,12 @@ function togglePause() {
 }
 
 function stop() {
+  if (timer && currentEntry) {
+    const now = performance.now()
+    timer.advance(now)
+    record({ ...currentEntry, elapsedMs: timer.elapsed(now), cycles: timer.read(now).cycle })
+  }
+  currentEntry = undefined
   timer = undefined
   releaseScreenLock()
   cancelAnimationFrame(frame)
@@ -312,9 +325,7 @@ onUnmounted(() => {
         <h2 ref="heading" tabindex="-1">{{ t('plan') }}</h2>
         <span class="plan-count" :aria-label="t('intervalCount', { count: drafts.length })">{{ String(drafts.length).padStart(2, '0') }}</span>
       </div>
-      <div class="plan-strip" aria-hidden="true">
-        <span v-for="draft in drafts" :key="draft.id" :class="{ rest: isRest(draftName(draft)) }" :style="{ flexGrow: segmentWeight(draft) }"></span>
-      </div>
+      <label>{{ t('workoutName') }}<input v-model="workoutName" type="text"></label>
       <fieldset v-for="(draft, index) in drafts" :key="draft.id" class="card">
         <legend>{{ t('interval', { number: index + 1 }) }}</legend>
         <label>{{ t('name') }}<input :id="`interval-${draft.id}`" :value="draftName(draft)" :placeholder="t('interval', { number: index + 1 })" @input="editName(draft, $event)"></label>
@@ -387,7 +398,12 @@ onUnmounted(() => {
       <p v-if="writeError" class="error" role="alert">{{ t('writeError') }}</p>
       <p v-if="entries.length === 0" class="muted">{{ t('emptyHistory') }}</p>
       <article v-for="entry in entries" :key="entry.id" class="history-entry">
+        <h3 v-if="entry.name">{{ entry.name }}</h3>
         <time class="muted" :datetime="entry.startedAt">{{ dateFormat.format(new Date(entry.startedAt)) }}</time>
+        <p class="muted">
+          {{ t('elapsed', { duration: entry.elapsedMs === undefined ? '—' : formatElapsed(entry.elapsedMs) }) }}
+          <template v-if="entry.cycles !== undefined"> · {{ t('cycles', entry.cycles) }}</template>
+        </p>
         <p>{{ entry.settings.intervals.map(interval => interval.name + ' ' + describe(interval)).join(' → ') }}</p>
         <button type="button" @click="useEntry(entry)">{{ t('use') }}</button>
       </article>

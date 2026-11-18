@@ -75,15 +75,6 @@ nav [aria-current] { color: var(--accent); border-color: currentColor; font-weig
   color: var(--accent);
   font: 700 1.55rem/1 Consolas, monospace;
 }
-.plan-strip {
-  display: flex;
-  gap: 3px;
-  height: 8px;
-  overflow: hidden;
-}
-.plan-strip span { flex-basis: 0; background: var(--accent); }
-.plan-strip .rest { background: var(--rest); }
-
 .row-actions, .actions { flex-wrap: wrap; }
 .row-actions { margin-top: 8px; }
 .primary { flex: 1 1 auto; background: var(--accent); color: var(--on-accent); font-weight: 750; }
@@ -110,6 +101,7 @@ nav [aria-current] { color: var(--accent); border-color: currentColor; font-weig
 .error { color: var(--error); }
 .muted { color: var(--muted); }
 .history-entry { display: grid; justify-items: start; gap: 8px; padding-block: 12px 0; border-top: 1px solid var(--line); }
+.history-entry h3 { margin: 0; max-width: 100%; overflow-wrap: anywhere; }
 .history-entry time { font-size: .875rem; }
 .history-entry button { color: var(--accent); }
 .workout-shell { max-width: 790px; }
