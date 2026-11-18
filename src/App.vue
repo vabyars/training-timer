@@ -62,6 +62,8 @@ const writeError = ref(false)
 const audioError = ref(false)
 const audio = createAudio(() => { audioError.value = true })
 let timer: ReturnType<typeof createTimer> | undefined
+let screenLock: WakeLockSentinel | undefined
+let requestingScreenLock = false
 let frame = 0
 const display = ref<ReturnType<ReturnType<typeof createTimer>['read']>>()
 
@@ -188,6 +190,36 @@ function tick() {
   frame = requestAnimationFrame(tick)
 }
 
+function needsScreenLock() {
+  return Boolean(timer && display.value && !display.value.paused && document.visibilityState === 'visible')
+}
+
+async function keepScreenOn() {
+  if (!navigator.wakeLock || !needsScreenLock() || requestingScreenLock || screenLock?.released === false) return
+
+  requestingScreenLock = true
+  try {
+    const lock = await navigator.wakeLock.request('screen')
+    if (needsScreenLock()) screenLock = lock
+    else void lock.release().catch(() => {})
+  } catch {
+    // The browser may deny the request, for example in low-power mode.
+  } finally {
+    requestingScreenLock = false
+  }
+}
+
+function releaseScreenLock() {
+  const lock = screenLock
+  screenLock = undefined
+  void lock?.release().catch(() => {})
+}
+
+function updateScreenLock() {
+  if (needsScreenLock()) void keepScreenOn()
+  else releaseScreenLock()
+}
+
 function start() {
   if (!canStart.value || timer) return
 
@@ -203,6 +235,7 @@ function start() {
   audio.stop()
   if (settings.sound) audio.start(intervals[0].name, speechLanguage.value, selectedVoice.value)
   tick()
+  void keepScreenOn()
   navigate('workout')
   record(settings)
 }
@@ -213,6 +246,7 @@ function togglePause() {
   if (display.value.paused) {
     timer.resume(now)
     tick()
+    void keepScreenOn()
     return
   }
 
@@ -222,10 +256,12 @@ function togglePause() {
   if (advanced) audio.play(state.current.name, speechLanguage.value, selectedVoice.value)
   display.value = state
   cancelAnimationFrame(frame)
+  releaseScreenLock()
 }
 
 function stop() {
   timer = undefined
+  releaseScreenLock()
   cancelAnimationFrame(frame)
   audio.stop()
   audioError.value = false
@@ -234,12 +270,15 @@ function stop() {
 
 onMounted(() => {
   loadHistory()
+  document.addEventListener('visibilitychange', updateScreenLock)
   window.speechSynthesis?.addEventListener('voiceschanged', updateVoices)
   updateVoices()
 })
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', updateScreenLock)
   window.speechSynthesis?.removeEventListener('voiceschanged', updateVoices)
   timer = undefined
+  releaseScreenLock()
   cancelAnimationFrame(frame)
   audio.stop()
 })
