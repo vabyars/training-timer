@@ -1,0 +1,150 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Макеты интервального таймера</title><style>:root{color-scheme:light dark}body{margin:0;background:light-dark(#edf2eb,#101713)}</style></head><body>
+<div id="training-concept" class="viz-dotted-background">
+  <div class="timer-shell">
+    <header><span class="mark"><span aria-hidden="true">◴</span></span><strong>Интервальный таймер</strong></header>
+    <nav aria-label="Экраны макета">
+      <button data-screen="setup" aria-pressed="true">Настройка</button>
+      <button data-screen="workout" aria-pressed="false">Тренировка</button>
+      <button data-screen="history" aria-pressed="false">История</button>
+    </nav>
+    <section data-panel="setup">
+      <div class="heading"><h2>Интервалы</h2><label class="sound"><input type="checkbox" checked> Звук</label></div>
+      <div class="intervals">
+        <article>
+          <div class="interval-top"><span class="index">01</span><label>Название<input aria-label="Название первого интервала" value="Работа"></label></div>
+          <div class="fields"><label>Тип<select><option>Фиксированный</option><option>Случайный</option></select></label><label data-duration>Секунды<input type="number" min="1" max="3600" value="10"></label><label data-max hidden>Макс., с<input type="number" min="1" max="3600" value="10"></label></div>
+        </article>
+        <article>
+          <div class="interval-top"><span class="index">02</span><label>Название<input aria-label="Название второго интервала" value="Отдых"></label></div>
+          <div class="fields"><label>Тип<select><option>Фиксированный</option><option selected>Случайный</option></select></label><label data-duration>Мин., с<input type="number" min="1" max="3600" value="5"></label><label data-max>Макс., с<input type="number" min="1" max="3600" value="10"></label></div>
+        </article>
+      </div>
+      <div class="actions"><button class="outline" data-add>+ Интервал</button><button class="primary" data-start>Начать тренировку</button></div>
+    </section>
+    <section data-panel="workout" hidden>
+      <div class="training">
+        <span class="cycle">Цикл 1</span>
+        <h2 data-current>Работа</h2>
+        <div class="dial" aria-label="Осталось 7 секунд"><div><strong data-time>00:07</strong><span data-state>До смены интервала</span></div></div>
+        <p data-next>Далее · Отдых, 5–10 с</p>
+      </div>
+      <div class="actions"><button class="outline" data-screen="setup">Завершить</button><button class="primary" data-pause>Пауза</button></div>
+    </section>
+    <section data-panel="history" hidden>
+      <h2>История</h2>
+      <div class="history">
+        <article><time datetime="2026-11-18T18:40">18 ноября, 18:40</time><p>Работа 10 с → Отдых 5–10 с</p><button class="outline" data-use="range">Использовать</button></article>
+        <article><time datetime="2026-11-17T19:15">17 ноября, 19:15</time><p>Работа 10 с → Отдых 4 с</p><button class="outline" data-use="fixed">Использовать</button></article>
+      </div>
+    </section>
+  </div>
+</div>
+<style>
+  #training-concept { padding: 22px 8px; font: 14px/1.45 system-ui, sans-serif; }
+  #training-concept * { box-sizing: border-box; }
+  #training-concept [hidden] { display: none !important; }
+  #training-concept .timer-shell { --ink: light-dark(#1c2822,#e8f1e9); --soft: light-dark(#50665a,#aabdb1); --paper: light-dark(#f8faf6,#141d19); --panel: light-dark(#fff,#1d2a23); --line: light-dark(#cfdbd3,#3c4e43); --accent: light-dark(#166544,#9ce7ae); --on-accent: light-dark(#fff,#10271a); width: 100%; max-width: 520px; margin: auto; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; }
+  #training-concept header, #training-concept nav { padding: 12px 18px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+  #training-concept .mark { display: grid; place-items: center; background: var(--accent); color: var(--on-accent); border-radius: 10px; width: 34px; height: 34px; }
+  #training-concept button, #training-concept input, #training-concept select { font: inherit; color: inherit; }
+  #training-concept button { min-height: 44px; background: transparent; padding: 7px 10px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; }
+  #training-concept nav { padding-block: 6px; justify-content: space-between; gap: 0; }
+  #training-concept nav [aria-pressed="true"] { background: var(--panel); border-color: var(--line); color: var(--accent); font-weight: 700; }
+  #training-concept section { padding: 16px; }
+  #training-concept h2 { margin: 0; font-size: 24px; letter-spacing: -.04em; }
+  #training-concept .heading, #training-concept .actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  #training-concept .sound { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
+  #training-concept input[type="checkbox"] { accent-color: var(--accent); }
+  #training-concept article { background: var(--panel); border: 1px solid var(--line); border-radius: 15px; padding: 12px; margin-top: 10px; }
+  #training-concept .interval-top, #training-concept .fields { display: flex; align-items: end; gap: 8px; }
+  #training-concept .fields { margin-top: 8px; flex-wrap: wrap; }
+  #training-concept .fields label { flex: 1 1 65px; }
+  #training-concept .fields label:first-child { flex: 2 1 135px; }
+  #training-concept .index { display: grid; place-items: center; width: 34px; min-height: 44px; color: var(--accent); font-weight: 700; }
+  #training-concept label { color: var(--soft); }
+  #training-concept .interval-top label { flex: 1; min-width: 0; }
+  #training-concept input:not([type="checkbox"]), #training-concept select { display: block; width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); padding: 4px 6px; font-size: 16px; }
+  #training-concept .actions { margin-top: 14px; }
+  #training-concept .primary { background: var(--accent); color: var(--on-accent); font-weight: 700; flex: 1; }
+  #training-concept .outline { border-color: var(--line); background: var(--panel); }
+  #training-concept .training { display: grid; justify-items: center; gap: 10px; padding: 8px 0; text-align: center; }
+  #training-concept .cycle, #training-concept time, #training-concept .dial span { color: var(--soft); }
+  #training-concept .dial { width: min(100%, 216px); aspect-ratio: 1; border-radius: 50%; background: conic-gradient(var(--accent) 70%, var(--line) 0); padding: 9px; }
+  #training-concept .dial > div { border-radius: 50%; background: var(--paper); height: 100%; display: grid; place-content: center; }
+  #training-concept .dial strong { font-size: clamp(32px, 11vw, 56px); font-variant-numeric: tabular-nums; line-height: 1.1; letter-spacing: -.06em; }
+  #training-concept p { margin: 0; }
+  #training-concept .history p { margin: 5px 0 10px; }
+</style>
+<script>
+  (() => {
+    const root = document.getElementById("training-concept");
+    const list = root.querySelector(".intervals");
+    const pause = root.querySelector("[data-pause]");
+    const workout = root.querySelector("[data-panel=workout]");
+    const state = root.querySelector("[data-state]");
+    const show = (name) => {
+      root.querySelectorAll("[data-panel]").forEach(panel => { panel.hidden = panel.dataset.panel !== name; });
+      root.querySelectorAll("nav button").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.screen === name)));
+    };
+    const updateMode = (select) => {
+      const row = select.closest("article");
+      const random = select.selectedIndex === 1;
+      row.querySelector("[data-duration]").firstChild.textContent = random ? "Мин., с" : "Секунды";
+      row.querySelector("[data-max]").hidden = !random;
+    };
+    root.addEventListener("change", event => {
+      if (event.target.matches("select")) updateMode(event.target);
+    });
+    root.addEventListener("click", event => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      if (button.dataset.screen) show(button.dataset.screen);
+      if (button.hasAttribute("data-start")) {
+        const [first, next = first] = Array.from(list.children);
+        const value = Number(first.querySelector("[data-duration] input").value);
+        const time = [Math.floor(value / 60), value % 60].map(part => String(part).padStart(2, "0")).join(":");
+        workout.querySelector("[data-current]").textContent = first.querySelector(".interval-top input").value || "Интервал 1";
+        workout.querySelector("[data-time]").textContent = time;
+        workout.querySelector(".dial").setAttribute("aria-label", "Остаток " + time);
+        const min = next.querySelector("[data-duration] input").value;
+        const duration = next.querySelector("select").selectedIndex === 1 ? min + "–" + next.querySelector("[data-max] input").value : min;
+        workout.querySelector("[data-next]").textContent = "Далее · " + (next.querySelector(".interval-top input").value || "Интервал") + ", " + duration + " с";
+        state.textContent = "До смены интервала";
+        pause.textContent = "Пауза";
+        show("workout");
+      }
+      if (button === pause) {
+        const paused = pause.textContent === "Пауза";
+        pause.textContent = paused ? "Продолжить" : "Пауза";
+        state.textContent = paused ? "На паузе" : "До смены интервала";
+      }
+      if (button.hasAttribute("data-add")) {
+        const row = list.firstElementChild.cloneNode(true);
+        const number = list.children.length + 1;
+        row.querySelector(".index").textContent = String(number).padStart(2, "0");
+        const title = row.querySelector(".interval-top input");
+        title.value = "Интервал " + number;
+        title.setAttribute("aria-label", "Название интервала " + number);
+        row.querySelector("select").selectedIndex = 0;
+        updateMode(row.querySelector("select"));
+        list.append(row);
+        title.focus();
+      }
+      if (button.dataset.use) {
+        while (list.children.length > 2) list.lastElementChild.remove();
+        const [first, second] = list.children;
+        first.querySelector(".interval-top input").value = "Работа";
+        second.querySelector(".interval-top input").value = "Отдых";
+        first.querySelector("select").selectedIndex = 0;
+        first.querySelector("[data-duration] input").value = 10;
+        const ranged = button.dataset.use === "range";
+        second.querySelector("select").selectedIndex = ranged ? 1 : 0;
+        second.querySelector("[data-duration] input").value = ranged ? 5 : 4;
+        second.querySelector("[data-max] input").value = 10;
+        list.querySelectorAll("select").forEach(updateMode);
+        show("setup");
+      }
+    });
+  })();
+</script>
+</body></html>

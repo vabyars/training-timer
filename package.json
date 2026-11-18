@@ -1,0 +1,28 @@
+{
+  "name": "training-timer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "lint": "oxlint --vue-plugin --deny-warnings",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "vue": "^3.5.0",
+    "vue-i18n": "^11.4.22"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.0",
+    "husky": "^9.1.7",
+    "oxlint": "^1.50.0",
+    "rollup": "npm:@rollup/wasm-node@^4.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.0",
+    "vue-tsc": "^3.1.0"
+  },
+  "overrides": {
+    "rollup": "$rollup"
+  }
+}
